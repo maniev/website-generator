@@ -851,6 +851,645 @@ export const COMPONENT_BLOCKS = [
 </section>`
   },
   {
+    id: 'gallery-editorial-grid',
+    name: 'Editorial Dark Grid (Zero-Gap Text Overlay)',
+    category: 'Gallery',
+    icon: 'Grid',
+    html: `<section class="sitecraft-block editorial-gallery-block" style="padding: 40px 0; background: #090d16; color: white; font-family: inherit;">
+  <style>
+    .editorial-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: #000000;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) {
+      .editorial-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 550px) {
+      .editorial-grid { grid-template-columns: 1fr; }
+    }
+    .editorial-item {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      background: #1e293b;
+      cursor: pointer;
+    }
+    .editorial-item.tall-item {
+      grid-row: span 2;
+      aspect-ratio: 2/3;
+    }
+    @media (max-width: 550px) {
+      .editorial-item.tall-item { grid-row: span 1; aspect-ratio: 4/3; }
+    }
+    .editorial-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .editorial-item:hover img {
+      transform: scale(1.06);
+    }
+    .editorial-content {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(9, 13, 22, 0.88) 0%, rgba(9, 13, 22, 0.3) 50%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 24px 16px;
+      text-align: center;
+      transition: background 0.3s ease;
+    }
+    .editorial-item:hover .editorial-content {
+      background: linear-gradient(to top, rgba(9, 13, 22, 0.95) 0%, rgba(9, 13, 22, 0.5) 60%, rgba(0,0,0,0.2) 100%);
+    }
+    .editorial-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin: 0 0 4px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    .editorial-subtitle {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      margin: 0;
+      font-weight: 500;
+    }
+    .editorial-add-card {
+      background: rgba(99, 102, 241, 0.08);
+      border: 2px dashed #6366f1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      min-height: 240px;
+      transition: background 0.2s;
+    }
+    .editorial-add-card:hover {
+      background: rgba(99, 102, 241, 0.16);
+    }
+  </style>
+
+  <div style="text-align: center; max-width: 600px; margin: 0 auto 30px; padding: 0 20px;">
+    <span style="color: #6366f1; font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em;">Editorial Collection</span>
+    <h2 style="font-size: 2.2rem; font-weight: 850; color: #ffffff; margin: 6px 0;">Urban & Editorial Photography</h2>
+    <p style="color: #94a3b8; font-size: 0.95rem;">Seamless zero-gap dark grid collage with all-caps captions.</p>
+  </div>
+
+  <div class="editorial-grid">
+    <div class="sitecraft-gallery-item editorial-item tall-item">
+      <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80" alt="Waiting For Godot" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="WAITING FOR GODOT • Editorial People Photography">
+        <h4 class="editorial-title">WAITING FOR GODOT</h4>
+        <p class="editorial-subtitle">Editorial • People</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80" alt="Soulection" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="SOULECTION • Urban Music Studio">
+        <h4 class="editorial-title">SOULECTION</h4>
+        <p class="editorial-subtitle">Urban • Studio</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80" alt="Headache" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="HEADACHE • People Portraits">
+        <h4 class="editorial-title">HEADACHE</h4>
+        <p class="editorial-subtitle">People • Portraits</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80" alt="Headspace" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="HEADSPACE • Abstract Nature Scenery">
+        <h4 class="editorial-title">HEADSPACE</h4>
+        <p class="editorial-subtitle">Abstract • Nature</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80" alt="Workspace II" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="WORKSPACE II • Architecture & Workspace">
+        <h4 class="editorial-title">WORKSPACE II</h4>
+        <p class="editorial-subtitle">Architecture • Interior</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80" alt="Music Rooms" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="MUSIC ROOMS • Abstract Urban Coast">
+        <h4 class="editorial-title">MUSIC ROOMS</h4>
+        <p class="editorial-subtitle">Abstract • Urban</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80" alt="Cuppa Crea" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="CUPPA CREA • Portrait Photography">
+        <h4 class="editorial-title">CUPPA CREA</h4>
+        <p class="editorial-subtitle">Abstract • Architecture</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item tall-item">
+      <img src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=800&q=80" alt="Obvious" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="OBVIOUS • Sky & Ocean Horizons">
+        <h4 class="editorial-title">OBVIOUS</h4>
+        <p class="editorial-subtitle">Ocean • Landscape</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item editorial-item">
+      <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=800&q=80" alt="Snowflakes" />
+      <div class="editorial-content gallery-preview-trigger" data-caption="SNOWFLAKES • Outdoor Sports & Action">
+        <h4 class="editorial-title">SNOWFLAKES</h4>
+        <p class="editorial-subtitle">Sports • Action</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-add-card editorial-add-card" data-sitecraft-editor-only="true">
+      <div style="width: 44px; height: 44px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; box-shadow: 0 4px 14px rgba(99,102,241,0.35);">+</div>
+      <h4 style="color: #6366f1; font-size: 0.95rem; font-weight: 700; margin: 0 0 4px;">+ Add Editorial Photo Card</h4>
+      <p style="color: #94a3b8; font-size: 0.78rem; margin: 0;">Click to add photo tile to grid</p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const section = document.currentScript ? document.currentScript.parentElement : document.body;
+      const triggers = section.querySelectorAll('.gallery-preview-trigger');
+      
+      triggers.forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+          if (window._sitecraftEditorMode || document.querySelector('#sitecraft-editor-styles')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const card = trigger.closest('.editorial-item, .sitecraft-gallery-item');
+          const img = card ? card.querySelector('img') : null;
+          const imgUrl = img ? img.src : '';
+          const caption = trigger.getAttribute('data-caption') || (card ? card.querySelector('.editorial-title')?.textContent : 'Photo Preview');
+          
+          if (!imgUrl) return;
+          
+          let modal = document.getElementById('sitecraft-lightbox-modal');
+          if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'sitecraft-lightbox-modal';
+            modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(9,13,22,0.95); backdrop-filter:blur(12px); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; transition:opacity 0.3s ease;';
+            modal.innerHTML = '<button id="sitecraft-lightbox-close" style="position:absolute; top:24px; right:28px; background:rgba(255,255,255,0.15); color:white; border:none; width:46px; height:46px; border-radius:50%; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s; z-index:1000000;">✕</button><div style="max-width:90vw; max-height:88vh; position:relative; display:flex; flex-direction:column; align-items:center;"><img id="sitecraft-lightbox-img" src="" style="max-width:100%; max-height:82vh; object-fit:contain; border-radius:8px; box-shadow:0 20px 50px rgba(0,0,0,0.8);" /></div>';
+            document.body.appendChild(modal);
+            
+            modal.querySelector('#sitecraft-lightbox-close').addEventListener('click', () => {
+              modal.style.display = 'none';
+            });
+            modal.addEventListener('click', (ev) => {
+              if (ev.target === modal) modal.style.display = 'none';
+            });
+          }
+          
+          modal.querySelector('#sitecraft-lightbox-img').src = imgUrl;
+          modal.style.display = 'flex';
+        });
+      });
+    })();
+  </script>
+</section>`
+  },
+  {
+    id: 'gallery-masonry-mosaic',
+    name: 'Pinterest Masonry Mosaic Collage (5-Column Full Height)',
+    category: 'Gallery',
+    icon: 'Grid',
+    html: `<section class="sitecraft-block masonry-mosaic-gallery-block" style="padding: 60px 20px; max-width: 1400px; margin: 0 auto; font-family: inherit;">
+  <style>
+    .mosaic-columns {
+      column-count: 5;
+      column-gap: 16px;
+    }
+    @media (max-width: 1280px) {
+      .mosaic-columns { column-count: 4; }
+    }
+    @media (max-width: 960px) {
+      .mosaic-columns { column-count: 3; }
+    }
+    @media (max-width: 640px) {
+      .mosaic-columns { column-count: 2; }
+    }
+    @media (max-width: 400px) {
+      .mosaic-columns { column-count: 1; }
+    }
+    .mosaic-item {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0f172a;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .mosaic-item:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+    .mosaic-img-box {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+    .mosaic-img-box img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.5s ease;
+    }
+    .mosaic-item:hover .mosaic-img-box img {
+      transform: scale(1.05);
+    }
+    .mosaic-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      cursor: pointer;
+      padding: 16px;
+    }
+    .mosaic-item:hover .mosaic-overlay {
+      opacity: 1;
+    }
+    .mosaic-preview-btn {
+      background: #6366f1;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      pointer-events: none;
+    }
+    .mosaic-add-card {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      background: rgba(99, 102, 241, 0.05);
+      border: 2px dashed #6366f1;
+      border-radius: 10px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mosaic-add-card:hover {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: #4f46e5;
+    }
+  </style>
+
+  <div style="text-align: center; max-width: 680px; margin: 0 auto 36px;">
+    <span style="color: #6366f1; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Pinterest Masonry Mosaic</span>
+    <h2 style="font-size: 2.4rem; font-weight: 850; color: #0f172a; margin: 8px 0;">Art, Architecture & Living Mosaic</h2>
+    <p style="color: #64748b; font-size: 1.05rem;">Staggered full-height photos matching natural aspect ratios with sleek dark hover overlays.</p>
+  </div>
+
+  <div class="mosaic-columns">
+    <!-- Column Group 1 -->
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80" alt="Architectural Wooden Staircase" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Architectural Wooden Staircase Interior">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&w=800&q=80" alt="Family Portrait Gallery Gathering" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Family & Friends Gathering in Home Gallery">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column Group 2 -->
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80" alt="Art Exhibition Crowds" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Art Exhibition Visitors & Collectors">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80" alt="Museum Visitor Observing Art Canvas" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Museum Visitor Observing Canvas Portrait">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column Group 3 -->
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80" alt="Spectators Seated at Fine Art Exhibition" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Museum Visitors Contemplating Classical Paintings">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" alt="Sunlit Sofa Interior" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Modern Sunlit Living Room Suite">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=800&q=80" alt="Minimal Bedroom Suite" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Minimalist Bedroom & Glass Patio Doors">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column Group 4 -->
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80" alt="Gallery Speaker & Photography Wall" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Art Curator Presenting Photography Exhibition">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80" alt="Monochrome Architectural Building" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Monochrome Architectural Facade & Sky">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column Group 5 -->
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80" alt="Open Concept Floating Stairs Living Area" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Open Concept Living Suite & Floating Staircase">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item mosaic-item">
+      <div class="mosaic-img-box">
+        <img src="https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80" alt="Luxury White Sectional Living Room" />
+        <div class="mosaic-overlay gallery-preview-trigger" data-caption="Luxury White Sectional Living Room Suite">
+          <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sitecraft-add-card mosaic-add-card" data-sitecraft-editor-only="true">
+      <div style="width: 44px; height: 44px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; box-shadow: 0 4px 14px rgba(99,102,241,0.35);">+</div>
+      <h4 style="color: #6366f1; font-size: 0.95rem; font-weight: 700; margin: 0 0 4px;">+ Add Image Card</h4>
+      <p style="color: #64748b; font-size: 0.78rem; margin: 0;">Click to add photo to mosaic</p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const section = document.currentScript ? document.currentScript.parentElement : document.body;
+      const triggers = section.querySelectorAll('.gallery-preview-trigger');
+      
+      triggers.forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+          if (window._sitecraftEditorMode || document.querySelector('#sitecraft-editor-styles')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const card = trigger.closest('.mosaic-item, .sitecraft-gallery-item');
+          const img = card ? card.querySelector('img') : null;
+          const imgUrl = img ? img.src : '';
+          const caption = trigger.getAttribute('data-caption') || (img ? img.alt : 'Photo Preview');
+          
+          if (!imgUrl) return;
+          
+          let modal = document.getElementById('sitecraft-lightbox-modal');
+          if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'sitecraft-lightbox-modal';
+            modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(9,13,22,0.92); backdrop-filter:blur(10px); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; transition:opacity 0.3s ease;';
+            modal.innerHTML = '<button id="sitecraft-lightbox-close" style="position:absolute; top:24px; right:28px; background:rgba(255,255,255,0.15); color:white; border:none; width:46px; height:46px; border-radius:50%; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s; z-index:1000000;">✕</button><div style="max-width:90vw; max-height:88vh; position:relative; display:flex; flex-direction:column; align-items:center;"><img id="sitecraft-lightbox-img" src="" style="max-width:100%; max-height:82vh; object-fit:contain; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.6);" /></div>';
+            document.body.appendChild(modal);
+            
+            modal.querySelector('#sitecraft-lightbox-close').addEventListener('click', () => {
+              modal.style.display = 'none';
+            });
+            modal.addEventListener('click', (ev) => {
+              if (ev.target === modal) modal.style.display = 'none';
+            });
+          }
+          
+          modal.querySelector('#sitecraft-lightbox-img').src = imgUrl;
+          modal.style.display = 'flex';
+        });
+      });
+    })();
+  </script>
+</section>`
+  },
+  {
+    id: 'gallery-interactive-add',
+    name: 'Photo Gallery (with + Add Card & Dark Overlay)',
+    category: 'Gallery',
+    icon: 'Grid',
+    html: `<section class="sitecraft-block interactive-gallery-block" style="padding: 80px 24px; max-width: 1200px; margin: 0 auto; font-family: inherit;">
+  <style>
+    .gallery-img-box {
+      width: 100%;
+      height: 240px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #0f172a;
+    }
+    .gallery-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+      display: block;
+    }
+    .gallery-hover-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      cursor: pointer;
+      padding: 16px;
+    }
+    .sitecraft-gallery-item:hover .gallery-hover-overlay {
+      opacity: 1;
+    }
+    .sitecraft-gallery-item:hover img {
+      transform: scale(1.08);
+    }
+    .preview-pill-btn {
+      background: #6366f1;
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      pointer-events: none;
+    }
+  </style>
+
+  <div style="text-align: center; max-width: 650px; margin: 0 auto 40px;">
+    <span style="color: #6366f1; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Photo Showcase</span>
+    <h2 style="font-size: 2.4rem; font-weight: 850; color: #0f172a; margin: 8px 0;">Photo & Portfolio Gallery</h2>
+    <p style="color: #64748b; font-size: 1.05rem;">Click photos to preview in a clean dark overlay. Click "+ Add Image Card" in the editor to append new photos (hidden on published site).</p>
+  </div>
+
+  <div class="sitecraft-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+    <div class="sitecraft-gallery-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: transform 0.2s;">
+      <div class="gallery-img-box">
+        <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80" alt="Serene Coastlines" />
+        <div class="gallery-hover-overlay gallery-preview-trigger" data-caption="Serene Coastlines - Aerial sunset captures along Hawaiian shores">
+          <span class="preview-pill-btn">🔍 Preview Full Photo</span>
+        </div>
+      </div>
+      <div style="padding: 14px 4px 4px;">
+        <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 4px;">Serene Coastlines</h4>
+        <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Nature & Photography</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: transform 0.2s;">
+      <div class="gallery-img-box">
+        <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80" alt="Alpine Peaks" />
+        <div class="gallery-hover-overlay gallery-preview-trigger" data-caption="Alpine Peaks - Majestic mountain ranges and snow summits">
+          <span class="preview-pill-btn">🔍 Preview Full Photo</span>
+        </div>
+      </div>
+      <div style="padding: 14px 4px 4px;">
+        <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 4px;">Alpine Peaks</h4>
+        <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Mountain Scenery</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-gallery-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: transform 0.2s;">
+      <div class="gallery-img-box">
+        <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80" alt="Misty Forest" />
+        <div class="gallery-hover-overlay gallery-preview-trigger" data-caption="Misty Forest Valleys - Early morning fog through pine forest">
+          <span class="preview-pill-btn">🔍 Preview Full Photo</span>
+        </div>
+      </div>
+      <div style="padding: 14px 4px 4px;">
+        <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 4px;">Misty Forest Valleys</h4>
+        <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Forest & Fog</p>
+      </div>
+    </div>
+
+    <div class="sitecraft-add-card" data-sitecraft-editor-only="true" style="background: rgba(99, 102, 241, 0.05); border: 2px dashed #6366f1; border-radius: 16px; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(99,102,241,0.35);">+</div>
+      <h4 style="color: #6366f1; font-size: 1.05rem; font-weight: 700; margin: 0 0 6px;">+ Add Image Card</h4>
+      <p style="color: #64748b; font-size: 0.82rem; margin: 0; max-width: 200px;">Click here to upload & add a new photo card to this gallery.</p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const section = document.currentScript ? document.currentScript.parentElement : document.body;
+      const triggers = section.querySelectorAll('.gallery-preview-trigger');
+      
+      triggers.forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+          if (window._sitecraftEditorMode || document.querySelector('#sitecraft-editor-styles')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const card = trigger.closest('.sitecraft-gallery-item');
+          const img = card ? card.querySelector('img') : null;
+          const imgUrl = img ? img.src : '';
+          const caption = trigger.getAttribute('data-caption') || (card ? card.querySelector('h4')?.textContent : 'Photo Preview');
+          
+          if (!imgUrl) return;
+          
+          let modal = document.getElementById('sitecraft-lightbox-modal');
+          if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'sitecraft-lightbox-modal';
+            modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(9,13,22,0.92); backdrop-filter:blur(10px); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; transition:opacity 0.3s ease;';
+            modal.innerHTML = '<button id="sitecraft-lightbox-close" style="position:absolute; top:24px; right:28px; background:rgba(255,255,255,0.15); color:white; border:none; width:46px; height:46px; border-radius:50%; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s; z-index:1000000;">✕</button><div style="max-width:90vw; max-height:88vh; position:relative; display:flex; flex-direction:column; align-items:center;"><img id="sitecraft-lightbox-img" src="" style="max-width:100%; max-height:80vh; object-fit:contain; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.6);" /></div>';
+            document.body.appendChild(modal);
+            
+            modal.querySelector('#sitecraft-lightbox-close').addEventListener('click', () => {
+              modal.style.display = 'none';
+            });
+            modal.addEventListener('click', (ev) => {
+              if (ev.target === modal) modal.style.display = 'none';
+            });
+          }
+          
+          modal.querySelector('#sitecraft-lightbox-img').src = imgUrl;
+          modal.style.display = 'flex';
+        });
+      });
+    })();
+  </script>
+</section>`
+  },
+  {
     id: 'gallery-filterable',
     name: 'Filterable Portfolio Gallery',
     category: 'Gallery',

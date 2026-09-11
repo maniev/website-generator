@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { tagHtmlElements } from '../utils/htmlParser';
 
 export const VisualCanvas = ({ 
@@ -21,8 +21,27 @@ export const VisualCanvas = ({
 }) => {
   const iframeRef = useRef(null);
 
-  // Tag HTML with editor helper script & styles
-  const processedHtml = tagHtmlElements(htmlContent, filesMap, activeFilePath);
+  // Store latest callbacks in ref to keep event listeners stable and avoid re-attaching on every render
+  const callbacksRef = useRef({});
+  callbacksRef.current = {
+    selectedElementId,
+    onSelectElement,
+    onUpdateElementText,
+    onInsertBlock,
+    onCopyElement,
+    onPasteElement,
+    onDuplicateElement,
+    onDeleteElement,
+    copiedElementHtml,
+    onUndo,
+    onRedo,
+    onSelectParent
+  };
+
+  // Tag HTML with editor helper script & styles (memoized to avoid re-parsing and iframe reload loops)
+  const processedHtml = useMemo(() => {
+    return tagHtmlElements(htmlContent, filesMap, activeFilePath);
+  }, [htmlContent, filesMap, activeFilePath]);
 
   // Sync selection outline class inside iframe when selectedElementId changes
   useEffect(() => {
@@ -31,10 +50,9 @@ export const VisualCanvas = ({
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    // Remove previous selection styling
-    iframeDoc.querySelectorAll('.sitecraft-selected').forEach((el) => {
-      el.classList.remove('sitecraft-selected');
-    });
+    // Remove previous selection styling using fast HTMLCollection
+    const selectedElems = Array.from(iframeDoc.getElementsByClassName('sitecraft-selected'));
+    selectedElems.forEach((el) => el.classList.remove('sitecraft-selected'));
 
     // Add selected class
     if (selectedElementId) {
@@ -49,12 +67,20 @@ export const VisualCanvas = ({
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const handleIframeLoad = () => {
+    let cleanupIframeListeners = null;
+
+    const attachListeners = () => {
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) return;
+      if (!iframeDoc || !iframeDoc.body) return;
+
+      // Avoid re-attaching multiple event listeners to the same iframe document instance
+      if (iframeDoc._sitecraftListenersAttached) return;
+      iframeDoc._sitecraftListenersAttached = true;
 
       // Handle element selection inside iframe
       const handleClick = (e) => {
+        const { onSelectElement, onInsertBlock } = callbacksRef.current;
+
         // If clicking inside an editable element, allow native browser caret placement
         if (e.target.closest('[contenteditable="true"]')) {
           return;
@@ -64,22 +90,83 @@ export const VisualCanvas = ({
         e.preventDefault();
         e.stopPropagation();
 
-        const target = e.target.closest('[data-sitecraft-id]');
+        // If clicking + Add Image Card placeholder in visual editor, insert a new photo card before it
+        const addCardTarget = e.target.closest('.sitecraft-add-card, [data-sitecraft-editor-only="true"]');
+        if (addCardTarget) {
+          const addCardId = addCardTarget.getAttribute('data-sitecraft-id');
+          if (addCardId) {
+            let newPhotoCardHtml = '';
+            if (addCardTarget.closest('.editorial-grid')) {
+              newPhotoCardHtml = `
+<div class="sitecraft-gallery-item editorial-item">
+  <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80" alt="NEW EDITORIAL PHOTO" />
+  <div class="editorial-content gallery-preview-trigger" data-caption="NEW EDITORIAL PHOTO • Urban Photography">
+    <h4 class="editorial-title">NEW EDITORIAL PHOTO</h4>
+    <p class="editorial-subtitle">Editorial • Urban</p>
+  </div>
+</div>`;
+            } else if (addCardTarget.closest('.mosaic-columns')) {
+              newPhotoCardHtml = `
+<div class="sitecraft-gallery-item mosaic-item">
+  <div class="mosaic-img-box">
+    <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80" alt="New Mosaic Photo" />
+    <div class="mosaic-overlay gallery-preview-trigger" data-caption="New Mosaic Photo">
+      <span class="mosaic-preview-btn">🔍 Preview Photo</span>
+    </div>
+  </div>
+</div>`;
+            } else {
+              newPhotoCardHtml = `
+<div class="sitecraft-gallery-item" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: transform 0.2s;">
+  <div class="gallery-img-box" style="width: 100%; height: 240px; position: relative; overflow: hidden; border-radius: 12px; background: #0f172a;">
+    <img src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80" alt="New Gallery Photo" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+    <div class="gallery-hover-overlay gallery-preview-trigger" data-caption="New Gallery Photo" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.78); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; cursor: pointer;">
+      <span class="preview-pill-btn" style="background: #6366f1; color: white; padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">🔍 Preview Full Photo</span>
+    </div>
+  </div>
+  <div style="padding: 12px 4px 4px;">
+    <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">New Gallery Photo</h4>
+  </div>
+</div>`;
+            }
+            onInsertBlock(newPhotoCardHtml, 'before', addCardId);
+            return;
+          }
+        }
+
+        let target = e.target.closest('[data-sitecraft-id]');
         if (!target) {
           onSelectElement(null);
           return;
         }
 
-        // Remove previous selection styling
-        iframeDoc.querySelectorAll('.sitecraft-selected').forEach((el) => {
-          el.classList.remove('sitecraft-selected');
-        });
+        // If clicking on an overlay container or preview trigger background (and not text), select the underlying img tag if present
+        if (target.classList.contains('editorial-content') || 
+            target.classList.contains('mosaic-overlay') || 
+            target.classList.contains('gallery-hover-overlay') || 
+            target.classList.contains('gallery-preview-trigger')) {
+          const isTextClick = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'button', 'a'].includes(e.target.tagName.toLowerCase());
+          if (!isTextClick) {
+            const cardItem = target.closest('.editorial-item, .mosaic-item, .sitecraft-gallery-item');
+            const cardImg = cardItem ? cardItem.querySelector('img[data-sitecraft-id]') : null;
+            if (cardImg) {
+              target = cardImg;
+            }
+          } else {
+            const textTarget = e.target.closest('[data-sitecraft-id]');
+            if (textTarget) target = textTarget;
+          }
+        }
+
+        // Remove previous selection styling using fast HTMLCollection
+        const selectedElems = Array.from(iframeDoc.getElementsByClassName('sitecraft-selected'));
+        selectedElems.forEach((el) => el.classList.remove('sitecraft-selected'));
 
         // Add selected class
         target.classList.add('sitecraft-selected');
 
         const sitecraftId = target.getAttribute('data-sitecraft-id');
-        const computedStyle = iframe.contentWindow.getComputedStyle(target);
+        const computedStyle = iframe.contentWindow ? iframe.contentWindow.getComputedStyle(target) : {};
 
         // Gather attribute dictionary
         const attrs = {};
@@ -90,10 +177,13 @@ export const VisualCanvas = ({
           }
         }
 
+        // Avoid layout reflow by only extracting textContent for leaf text elements
+        const textVal = target.children.length === 0 ? target.innerText : '';
+
         onSelectElement({
           id: sitecraftId,
           tagName: target.tagName.toLowerCase(),
-          textContent: target.innerText,
+          textContent: textVal,
           attributes: attrs,
           styles: {
             color: computedStyle.color,
@@ -118,18 +208,18 @@ export const VisualCanvas = ({
 
       // Enable inline double-click editing
       const handleDblClick = (e) => {
+        const { onUpdateElementText } = callbacksRef.current;
         const target = e.target.closest('[data-sitecraft-id]');
         if (target && !['IMG', 'INPUT', 'SELECT'].includes(target.tagName)) {
           target.setAttribute('contenteditable', 'true');
           target.focus();
 
-          // Place caret at the end of the text contents
           try {
             const range = iframeDoc.createRange();
             const sel = iframe.contentWindow?.getSelection();
             if (sel) {
               range.selectNodeContents(target);
-              range.collapse(false); // Collapse to end
+              range.collapse(false);
               sel.removeAllRanges();
               sel.addRange(range);
             }
@@ -156,13 +246,11 @@ export const VisualCanvas = ({
         const body = iframeDoc.body;
         if (!body) return;
 
-        // Get direct children of body, excluding scripts, styles, and the indicator itself
         const children = Array.from(body.children).filter(child => {
           return !['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME'].includes(child.tagName) && 
                  !child.classList.contains('sitecraft-drop-indicator');
         });
 
-        // Find or create the indicator
         let indicator = iframeDoc.getElementById('sitecraft-drop-indicator');
         if (!indicator) {
           indicator = iframeDoc.createElement('div');
@@ -171,8 +259,6 @@ export const VisualCanvas = ({
         }
 
         const mouseY = e.clientY;
-
-        // Find the best insertion spot based on visual layout position
         let insertBeforeEl = null;
         let found = false;
 
@@ -205,7 +291,6 @@ export const VisualCanvas = ({
       };
 
       const handleDragLeave = (e) => {
-        // Remove if we actually leave the body/window bounds
         const rect = iframeDoc.documentElement.getBoundingClientRect();
         if (
           e.clientX < rect.left || 
@@ -222,7 +307,8 @@ export const VisualCanvas = ({
 
       const handleDrop = (e) => {
         e.preventDefault();
-        
+        const { onInsertBlock } = callbacksRef.current;
+
         const blockHtml = e.dataTransfer.getData('text/plain') || 
                            window.parent?.draggedBlockHtml || 
                            window.draggedBlockHtml;
@@ -250,6 +336,18 @@ export const VisualCanvas = ({
       };
 
       const handleKeyDown = (e) => {
+        const { 
+          selectedElementId, 
+          copiedElementHtml, 
+          onCopyElement, 
+          onPasteElement, 
+          onDuplicateElement, 
+          onDeleteElement, 
+          onUndo, 
+          onRedo, 
+          onSelectParent 
+        } = callbacksRef.current;
+
         const activeEl = iframeDoc.activeElement;
         const isEditable = activeEl && (
           activeEl.hasAttribute('contenteditable') || 
@@ -302,8 +400,8 @@ export const VisualCanvas = ({
       };
 
       // Add selected class to current selected element on load
-      if (selectedElementId) {
-        const selectedEl = iframeDoc.querySelector(`[data-sitecraft-id="${selectedElementId}"]`);
+      if (callbacksRef.current.selectedElementId) {
+        const selectedEl = iframeDoc.querySelector(`[data-sitecraft-id="${callbacksRef.current.selectedElementId}"]`);
         if (selectedEl) {
           selectedEl.classList.add('sitecraft-selected');
         }
@@ -315,31 +413,33 @@ export const VisualCanvas = ({
       iframeDoc.body?.addEventListener('dragleave', handleDragLeave);
       iframeDoc.body?.addEventListener('drop', handleDrop);
       iframeDoc.addEventListener('keydown', handleKeyDown);
+
+      cleanupIframeListeners = () => {
+        iframeDoc._sitecraftListenersAttached = false;
+        iframeDoc.body?.removeEventListener('click', handleClick);
+        iframeDoc.body?.removeEventListener('blur', handleDblClick);
+        iframeDoc.body?.removeEventListener('dragover', handleDragOver);
+        iframeDoc.body?.removeEventListener('dragleave', handleDragLeave);
+        iframeDoc.body?.removeEventListener('drop', handleDrop);
+        iframeDoc.removeEventListener('keydown', handleKeyDown);
+      };
     };
 
-    // If iframe is already loaded/ready, initialize handlers immediately
+    const handleLoad = () => {
+      attachListeners();
+    };
+
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (iframeDoc && (iframeDoc.readyState === 'complete' || iframeDoc.readyState === 'interactive')) {
-      handleIframeLoad();
+      attachListeners();
     }
 
-    iframe.addEventListener('load', handleIframeLoad);
-    return () => iframe.removeEventListener('load', handleIframeLoad);
-  }, [
-    processedHtml, 
-    onSelectElement, 
-    onUpdateElementText, 
-    onInsertBlock,
-    onCopyElement,
-    onPasteElement,
-    onDuplicateElement,
-    onDeleteElement,
-    copiedElementHtml,
-    onUndo,
-    onRedo,
-    selectedElementId,
-    onSelectParent
-  ]);
+    iframe.addEventListener('load', handleLoad);
+    return () => {
+      iframe.removeEventListener('load', handleLoad);
+      if (cleanupIframeListeners) cleanupIframeListeners();
+    };
+  }, [processedHtml]);
 
   return (
     <div className="studio-canvas-container">
@@ -354,3 +454,4 @@ export const VisualCanvas = ({
     </div>
   );
 };
+

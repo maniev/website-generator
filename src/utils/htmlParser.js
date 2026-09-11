@@ -59,27 +59,105 @@ export const inlineCssImports = (cssContent, cssFilePath, filesMap, visited = ne
   });
 };
 
-// Resolve relative url(...) references in a CSS content string to browser blob URLs or base64
-export const resolveCssUrls = (cssContent, cssFilePath, filesMap) => {
+// Cache for converted inline data URLs to prevent duplicate Blob URL creation
+const inlineBlobCache = new Map();
+
+// Convert inline base64 data URLs in CSS/styles to lightweight Blob URLs
+export const convertDataUrlToBlobUrl = (dataUrl) => {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return dataUrl;
+  if (inlineBlobCache.has(dataUrl)) {
+    return inlineBlobCache.get(dataUrl);
+  }
+  try {
+    const commaIdx = dataUrl.indexOf(',');
+    if (commaIdx === -1) return dataUrl;
+    const header = dataUrl.substring(0, commaIdx);
+    const base64 = dataUrl.substring(commaIdx + 1);
+    const mimeMatch = header.match(/data:(image\/[^;]+);base64/i);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const blobUrl = base64ToBlobUrl(base64, mimeType);
+    inlineBlobCache.set(dataUrl, blobUrl);
+    return blobUrl;
+  } catch (e) {
+    return dataUrl;
+  }
+};
+
+// Convert base64 data strings to browser Blob URLs on demand to avoid megabyte-sized HTML strings
+export const base64ToBlobUrl = (base64, mimeType = 'image/png') => {
+  try {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    const blob = new Blob(byteArrays, { type: mimeType });
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    return `data:${mimeType};base64,${base64}`;
+  }
+};
+
+const getMimeType = (path) => {
+  const ext = (path || '').split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'svg': return 'image/svg+xml';
+    case 'jpg': case 'jpeg': return 'image/jpeg';
+    case 'webp': return 'image/webp';
+    case 'gif': return 'image/gif';
+    case 'png': default: return 'image/png';
+  }
+};
+
+// Retrieve or generate a lightweight Blob URL for image files to keep HTML strings small
+export const getOrCreateBlobUrl = (fileObj) => {
+  if (!fileObj) return '';
+  if (fileObj.blobUrl) return fileObj.blobUrl;
+  if (fileObj.content && fileObj.type === 'image') {
+    const mime = getMimeType(fileObj.path || fileObj.name);
+    fileObj.blobUrl = base64ToBlobUrl(fileObj.content, mime);
+    return fileObj.blobUrl;
+  }
+  return '';
+};
+
+// Non-interactive micro tags to skip during DOM element tagging to keep DOM size small
+const IGNORED_TAGS = new Set([
+  'SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME',
+  'SVG', 'PATH', 'G', 'CIRCLE', 'RECT', 'POLYGON', 'POLYLINE', 'LINE', 'USE', 'DEFS', 'SYMBOL',
+  'BR', 'HR', 'HEAD', 'META', 'LINK', 'TITLE'
+]);
+
+// Resolve relative url(...) references in a CSS content string to browser blob URLs
+export const resolveCssUrls = (cssContent, cssFilePath = 'style.css', filesMap = {}) => {
   if (!cssContent) return '';
   
   // Matches url(...) in CSS
   const urlRegex = /url\s*\(\s*(['"]?)([^'")\s]+)\1\s*\)/gi;
   
   return cssContent.replace(urlRegex, (match, quote, relPath) => {
-    if (relPath.startsWith('http') || relPath.startsWith('//') || relPath.startsWith('data:') || relPath.startsWith('#')) {
+    if (relPath.startsWith('data:image/')) {
+      const bUrl = convertDataUrlToBlobUrl(relPath);
+      return `url(${quote}${bUrl}${quote})`;
+    }
+    if (relPath.startsWith('http') || relPath.startsWith('//') || relPath.startsWith('#')) {
       return match;
     }
     
     const resolvedPath = resolveRelativePath(cssFilePath, relPath);
     const matchedFile = filesMap[resolvedPath];
     
-    if (matchedFile && matchedFile.blobUrl) {
-      return `url(${quote}${matchedFile.blobUrl}${quote})`;
-    } else if (matchedFile && matchedFile.type === 'image' && matchedFile.content) {
-      const ext = resolvedPath.split('.').pop().toLowerCase();
-      const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
-      return `url(${quote}data:${mime};base64,${matchedFile.content}${quote})`;
+    if (matchedFile && matchedFile.type === 'image') {
+      const bUrl = getOrCreateBlobUrl(matchedFile);
+      if (bUrl) {
+        return `url(${quote}${bUrl}${quote})`;
+      }
     }
     
     return match;
@@ -133,20 +211,16 @@ export const tagHtmlElements = (htmlString, filesMap = {}, activeFilePath = 'ind
   
   let elementIdCounter = getMaxSitecraftId(doc) + 1;
   
-  // Traverse all elements in body and assign data-sitecraft-id if not present
+  // Traverse elements in body and assign data-sitecraft-id, filtering out SVG/micro tags
   const allElements = doc.body ? doc.body.querySelectorAll('*') : [];
   allElements.forEach((el) => {
-    // Skip script and style tags inside body
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME'].includes(el.tagName)) return;
+    if (IGNORED_TAGS.has(el.tagName.toUpperCase())) return;
     
     if (!el.getAttribute('data-sitecraft-id')) {
       el.setAttribute('data-sitecraft-id', `sc-${elementIdCounter++}`);
     }
   });
   
-  // If elementIdCounter is used, keep it unique
-  const nextId = () => `sc-${elementIdCounter++}`;
-
   // Filter linked CSS stylesheet tags case-insensitively
   const linkTags = Array.from(doc.querySelectorAll('link')).filter(link => {
     const rel = (link.getAttribute('rel') || '').toLowerCase().trim();
@@ -171,33 +245,81 @@ export const tagHtmlElements = (htmlString, filesMap = {}, activeFilePath = 'ind
     }
   });
 
-  // Dynamically swap image src elements with object URLs/blob URLs and optimize decoding
+  // Optimize all <style> tags containing data:image/ URIs
+  const styleTags = doc.querySelectorAll('style');
+  styleTags.forEach((styleTag) => {
+    if (styleTag.textContent && styleTag.textContent.includes('data:image/')) {
+      styleTag.textContent = resolveCssUrls(styleTag.textContent, activeFilePath, filesMap);
+    }
+  });
+
+  // Optimize all elements with inline style attributes containing data:image/ URIs
+  const inlineStyledElements = doc.querySelectorAll('[style*="data:image/"]');
+  inlineStyledElements.forEach((el) => {
+    const styleAttr = el.getAttribute('style');
+    if (styleAttr) {
+      el.setAttribute('style', resolveCssUrls(styleAttr, activeFilePath, filesMap));
+    }
+  });
+
+  // Dynamically swap image src elements with cached Blob URLs and optimize async decoding / lazy loading for galleries
   const imgTags = doc.querySelectorAll('img');
   imgTags.forEach((img) => {
     if (!img.hasAttribute('decoding')) {
       img.setAttribute('decoding', 'async');
     }
+    if (!img.hasAttribute('loading')) {
+      img.setAttribute('loading', 'lazy');
+    }
     const src = img.getAttribute('src');
     if (src) {
-      const imgPath = resolveRelativePath(activeFilePath, src);
-      const imgFile = filesMap[imgPath];
-      if (imgFile) {
-        if (imgFile.blobUrl) {
-          img.setAttribute('src', imgFile.blobUrl);
-        } else if (imgFile.content && imgFile.type === 'image') {
-          const ext = imgPath.split('.').pop().toLowerCase();
-          const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
-          img.setAttribute('src', `data:${mime};base64,${imgFile.content}`);
+      if (src.startsWith('data:image/')) {
+        const bUrl = convertDataUrlToBlobUrl(src);
+        img.setAttribute('src', bUrl);
+      } else {
+        const imgPath = resolveRelativePath(activeFilePath, src);
+        const imgFile = filesMap[imgPath];
+        if (imgFile) {
+          const bUrl = getOrCreateBlobUrl(imgFile);
+          if (bUrl) {
+            img.setAttribute('src', bUrl);
+          }
         }
       }
     }
   });
 
-  // Inject visual editor overlay script & css into head
   const head = doc.head || doc.createElement('head');
+
+  // Preconnect to Google Fonts if font stylesheets are used to optimize iframe rendering speed
+  if (doc.querySelector('link[href*="fonts.googleapis.com"]')) {
+    if (!doc.querySelector('link[rel="preconnect"][href*="fonts.googleapis.com"]')) {
+      const p1 = doc.createElement('link');
+      p1.rel = 'preconnect';
+      p1.href = 'https://fonts.googleapis.com';
+      head.appendChild(p1);
+    }
+    if (!doc.querySelector('link[rel="preconnect"][href*="fonts.gstatic.com"]')) {
+      const p2 = doc.createElement('link');
+      p2.rel = 'preconnect';
+      p2.href = 'https://fonts.gstatic.com';
+      p2.setAttribute('crossorigin', '');
+      head.appendChild(p2);
+    }
+  }
+
+  const flagScript = doc.createElement('script');
+  flagScript.id = 'sitecraft-editor-flag';
+  flagScript.textContent = 'window._sitecraftEditorMode = true;';
+  head.appendChild(flagScript);
+
   const styleEl = doc.createElement('style');
   styleEl.id = 'sitecraft-editor-styles';
   styleEl.textContent = `
+    #sitecraft-lightbox-modal {
+      display: none !important;
+      pointer-events: none !important;
+    }
     [data-sitecraft-id] {
       transition: outline 0.15s ease, box-shadow 0.15s ease;
       cursor: pointer !important;
@@ -363,6 +485,10 @@ export const getCompiledPageHtml = (fileObj, filesMap = {}, activeFilePath = 'in
     }
   });
 
+  // Remove editor-only helper elements (e.g. "+ Add Image Card" placeholders)
+  const editorOnlyElems = doc.querySelectorAll('[data-sitecraft-editor-only="true"], .sitecraft-add-card');
+  editorOnlyElems.forEach((el) => el.remove());
+
   // Remove any editor helper attributes
   const elements = doc.querySelectorAll('*');
   elements.forEach((el) => {
@@ -496,14 +622,17 @@ export const tagRawHtml = (htmlString) => {
   
   let elementIdCounter = getMaxSitecraftId(doc) + 1;
   const allElements = doc.body.querySelectorAll('*');
+  let taggedAny = false;
+
   allElements.forEach((el) => {
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME'].includes(el.tagName)) return;
+    if (IGNORED_TAGS.has(el.tagName.toUpperCase())) return;
     if (!el.getAttribute('data-sitecraft-id')) {
       el.setAttribute('data-sitecraft-id', `sc-${elementIdCounter++}`);
+      taggedAny = true;
     }
   });
   
-  return doc.documentElement.outerHTML;
+  return taggedAny ? doc.documentElement.outerHTML : htmlString;
 };
 
 // Insert an image element inside a specific target container
@@ -605,3 +734,36 @@ export const insertElementRelativeInHtml = (htmlString, blockHtml, targetId, pos
   
   return doc.documentElement.outerHTML;
 };
+
+// Update image src (and alt) for an element or its child img tag
+export const updateImageSourceInHtml = (htmlString, sitecraftId, newSrc, newAlt = null) => {
+  if (!htmlString || !sitecraftId) return htmlString;
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+  let targetEl = doc.querySelector(`[data-sitecraft-id="${sitecraftId}"]`);
+  
+  if (!targetEl) return htmlString;
+
+  // If target element is not an img tag, find an img tag inside it or its card container
+  if (targetEl.tagName.toLowerCase() !== 'img') {
+    const childImg = targetEl.querySelector('img') || targetEl.closest('.editorial-item, .mosaic-item, .sitecraft-gallery-item')?.querySelector('img');
+    if (childImg) {
+      targetEl = childImg;
+    }
+  }
+
+  if (targetEl) {
+    if (targetEl.tagName.toLowerCase() === 'img') {
+      targetEl.setAttribute('src', newSrc);
+      if (newAlt !== null) {
+        targetEl.setAttribute('alt', newAlt);
+      }
+    } else {
+      targetEl.innerHTML = `<img src="${newSrc}" alt="Image" style="max-width: 100%; border-radius: 8px;" />`;
+    }
+  }
+
+  return doc.documentElement.outerHTML;
+};
+

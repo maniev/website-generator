@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Box, FileArchive, Sparkles, Upload, Loader2 } from 'lucide-react';
 import { HeaderBar } from './components/HeaderBar';
 import { FileExplorer } from './components/FileExplorer';
 import { VisualCanvas } from './components/VisualCanvas';
@@ -22,194 +23,102 @@ import {
   insertImageIntoElementInHtml,
   duplicateElementInHtml,
   getCleanElementHtml,
-  insertElementRelativeInHtml
+  insertElementRelativeInHtml,
+  updateImageSourceInHtml
 } from './utils/htmlParser';
 
 import './styles/studio.css';
 
+const InitialUploadScreen = ({ onUploadZip, onLoadSample }) => {
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) onUploadZip(file);
+    event.target.value = '';
+  };
+
+  return (
+    <main className="initial-upload-screen">
+      <section className="initial-upload-card" aria-labelledby="initial-upload-title">
+        <div className="initial-upload-icon"><Box size={30} /></div>
+        <p className="initial-upload-eyebrow">Start a new project</p>
+        <h1 id="initial-upload-title">Upload your website template</h1>
+        <p className="initial-upload-copy">
+          Import an HTML template ZIP to start editing its pages, styles, scripts, and media assets.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip,application/zip,application/x-zip-compressed"
+          onChange={handleFileChange}
+          hidden
+        />
+        <button className="btn-studio btn-studio-primary initial-upload-action" onClick={() => fileInputRef.current?.click()}>
+          <Upload size={18} /> Upload ZIP template
+        </button>
+        <p className="initial-upload-hint"><FileArchive size={15} /> Select a .zip file containing your website files.</p>
+        <div className="initial-upload-divider"><span>or</span></div>
+        <button className="initial-sample-action" onClick={onLoadSample}>
+          <Sparkles size={16} /> Explore with the sample template
+        </button>
+      </section>
+    </main>
+  );
+};
+
 export default function App() {
   const [files, setFiles] = useState({});
   const [activeFilePath, setActiveFilePath] = useState('index.html');
-  const [viewMode, setViewMode] = useState('visual'); // 'visual' | 'code'
-  const [viewportMode, setViewportMode] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
-  const [sidebarTab, setSidebarTab] = useState('files'); // 'files' | 'blocks' | 'assets'
+  const [viewportMode, setViewportMode] = useState('desktop');
+  const [viewMode, setViewMode] = useState('visual');
   const [selectedElement, setSelectedElement] = useState(null);
   const [copiedElementHtml, setCopiedElementHtml] = useState(null);
-
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+  const [sidebarTab, setSidebarTab] = useState('pages');
+  const [uploadProgress, setUploadProgress] = useState({ isUploading: false, percent: 0, message: '' });
+
+  const detachedWindowRef = useRef(null);
   const codeTimerRef = useRef(null);
 
-  const saveToHistory = (currentFilesState) => {
-    // Save snapshot of current files in state
-    setUndoStack(prev => [...prev.slice(-49), currentFilesState]);
-    setRedoStack([]); // Clear redo
+  // Initialize with sample template on mount
+  useEffect(() => {
+    const sampleFiles = getSampleTemplateFiles('saas');
+    Object.keys(sampleFiles).forEach((path) => {
+      if (sampleFiles[path].type === 'html') {
+        sampleFiles[path].content = tagRawHtml(sampleFiles[path].content);
+      }
+    });
+    setFiles(sampleFiles);
+    setActiveFilePath('index.html');
+  }, []);
+
+  const activeFile = files[activeFilePath];
+
+  // Save history state before mutations
+  const saveToHistory = (currentFiles) => {
+    setUndoStack(prev => [...prev.slice(-19), currentFiles]);
+    setRedoStack([]);
   };
 
   const handleUndo = () => {
     if (undoStack.length === 0) return;
-    const prev = undoStack[undoStack.length - 1];
-    setUndoStack(curr => curr.slice(0, -1));
-    setRedoStack(curr => [...curr, files]);
-    setFiles(prev);
-    setSelectedElement(null);
+    const previous = undoStack[undoStack.length - 1];
+    setRedoStack(prev => [...prev, files]);
+    setFiles(previous);
+    setUndoStack(prev => prev.slice(0, prev.length - 1));
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
-    setRedoStack(curr => curr.slice(0, -1));
-    setUndoStack(curr => [...curr, files]);
+    setUndoStack(prev => [...prev, files]);
     setFiles(next);
-    setSelectedElement(null);
-  };
-  
-  const handleSelectParentElement = () => {
-    if (!selectedElement) return;
-
-    const iframe = document.querySelector('.preview-iframe');
-    if (!iframe) return;
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) return;
-
-    const currentEl = iframeDoc.querySelector(`[data-sitecraft-id="${selectedElement.id}"]`);
-    if (currentEl) {
-      const parentEl = currentEl.parentElement?.closest('[data-sitecraft-id]');
-      if (parentEl) {
-        const sitecraftId = parentEl.getAttribute('data-sitecraft-id');
-        const computedStyle = iframe.contentWindow.getComputedStyle(parentEl);
-
-        const attrs = {};
-        for (let i = 0; i < parentEl.attributes.length; i++) {
-          const attr = parentEl.attributes[i];
-          if (!attr.name.startsWith('data-sitecraft')) {
-            attrs[attr.name] = attr.value;
-          }
-        }
-
-        setSelectedElement({
-          id: sitecraftId,
-          tagName: parentEl.tagName.toLowerCase(),
-          textContent: parentEl.innerText,
-          attributes: attrs,
-          styles: {
-            color: computedStyle.color,
-            backgroundColor: computedStyle.backgroundColor,
-            fontSize: computedStyle.fontSize,
-            fontWeight: computedStyle.fontWeight,
-            padding: computedStyle.padding,
-            paddingTop: computedStyle.paddingTop,
-            paddingRight: computedStyle.paddingRight,
-            paddingBottom: computedStyle.paddingBottom,
-            paddingLeft: computedStyle.paddingLeft,
-            margin: computedStyle.margin,
-            marginTop: computedStyle.marginTop,
-            marginRight: computedStyle.marginRight,
-            marginBottom: computedStyle.marginBottom,
-            marginLeft: computedStyle.marginLeft,
-            borderRadius: computedStyle.borderRadius,
-            textAlign: computedStyle.textAlign
-          }
-        });
-      }
-    }
+    setRedoStack(prev => prev.slice(0, prev.length - 1));
   };
 
-  // Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+V / Ctrl+D / Delete / Escape)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ignore if focus is in an input or textarea in parent window
-      const activeEl = document.activeElement;
-      if (activeEl && (
-        activeEl.tagName === 'INPUT' || 
-        activeEl.tagName === 'TEXTAREA' || 
-        activeEl.isContentEditable ||
-        activeEl.closest('[contenteditable="true"]')
-      )) {
-        return;
-      }
-
-      const isCtrl = e.ctrlKey || e.metaKey;
-      const key = e.key.toLowerCase();
-
-      if (isCtrl && key === 'z') {
-        e.preventDefault();
-        handleUndo();
-      } else if (isCtrl && key === 'y') {
-        e.preventDefault();
-        handleRedo();
-      } else if (isCtrl && key === 'c') {
-        if (selectedElement) {
-          e.preventDefault();
-          handleCopyElement(selectedElement.id);
-        }
-      } else if (isCtrl && key === 'v') {
-        if (copiedElementHtml) {
-          e.preventDefault();
-          handlePasteElement(selectedElement?.id);
-        }
-      } else if (isCtrl && key === 'd') {
-        if (selectedElement) {
-          e.preventDefault();
-          handleDuplicateElement(selectedElement.id);
-        }
-      } else if (key === 'delete' || key === 'backspace') {
-        if (selectedElement) {
-          e.preventDefault();
-          handleDeleteElement(selectedElement.id);
-        }
-      } else if (key === 'escape') {
-        if (selectedElement) {
-          e.preventDefault();
-          handleSelectParentElement();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [files, undoStack, redoStack, selectedElement, copiedElementHtml]);
-
-  // Persistently tag all HTML files when switching to visual mode
-  useEffect(() => {
-    if (viewMode === 'visual') {
-      setFiles(prev => {
-        let changed = false;
-        const next = { ...prev };
-        Object.keys(next).forEach(path => {
-          if (next[path].type === 'html') {
-            const tagged = tagRawHtml(next[path].content);
-            if (tagged !== next[path].content) {
-              next[path] = {
-                ...next[path],
-                content: tagged,
-                updatedAt: Date.now()
-              };
-              changed = true;
-            }
-          }
-        });
-        return changed ? next : prev;
-      });
-    }
-  }, [viewMode]);
-
-  const detachedWindowRef = useRef(null);
-
-  // Initialize with ready-to-use sample template
-  useEffect(() => {
-    const defaultFiles = getSampleTemplateFiles('saas');
-    Object.keys(defaultFiles).forEach((path) => {
-      if (defaultFiles[path].type === 'html') {
-        defaultFiles[path].content = tagRawHtml(defaultFiles[path].content);
-      }
-    });
-    setFiles(defaultFiles);
-  }, []);
-
-  const activeFile = files[activeFilePath] || Object.values(files)[0];
-  const pageSections = activeFile && activeFile.type === 'html' ? getPageSections(activeFile.content) : [];
-
-  // Open Detached Live Preview Window
+  // Open Detached Preview Window
   const handleOpenDetachedPreview = () => {
     if (!activeFile || activeFile.type !== 'html') {
       alert('Please select an HTML page to view in detached window.');
@@ -217,7 +126,6 @@ export default function App() {
     }
 
     const compiledHtml = getCompiledPageHtml(activeFile, files, activeFilePath);
-    
     const win = window.open('', '_blank', 'width=1280,height=850');
     if (!win) {
       alert('Popup blocked! Please allow popups to open detached preview window.');
@@ -242,26 +150,36 @@ export default function App() {
       win.document.close();
       win.document.title = `Detached View - ${activeFile.name}`;
     }
-  }, [files, activeFilePath, activeFile]);
+  }, [files, activeFilePath]);
 
-  // 1. Upload ZIP File
+  // 1. Upload ZIP File with Real-time Progress Bar
   const handleUploadZip = async (zipFile) => {
+    setUploadProgress({ isUploading: true, percent: 10, message: 'Reading ZIP file...' });
     try {
-      const extractedFiles = await extractZipFile(zipFile);
+      const extractedFiles = await extractZipFile(zipFile, (percent, message) => {
+        setUploadProgress({ isUploading: true, percent, message });
+      });
+
       Object.keys(extractedFiles).forEach((path) => {
         if (extractedFiles[path].type === 'html') {
           extractedFiles[path].content = tagRawHtml(extractedFiles[path].content);
         }
       });
+
+      setUploadProgress({ isUploading: true, percent: 100, message: 'Template imported successfully!' });
+      setTimeout(() => {
+        setUploadProgress({ isUploading: false, percent: 0, message: '' });
+      }, 400);
+
       setUndoStack([]);
       setRedoStack([]);
       setFiles(extractedFiles);
       
-      // Auto-select first html file or index.html
       const htmlFile = Object.keys(extractedFiles).find(p => p.endsWith('.html')) || Object.keys(extractedFiles)[0];
       if (htmlFile) setActiveFilePath(htmlFile);
       setSelectedElement(null);
     } catch (err) {
+      setUploadProgress({ isUploading: false, percent: 0, message: '' });
       alert('Failed to extract ZIP file. Please ensure it is a valid zip archive.');
       console.error(err);
     }
@@ -312,7 +230,6 @@ export default function App() {
       type = 'js';
       content = `// Custom Script`;
     } else {
-      // Default to HTML
       const cleanName = pageName.replace('.html', '');
       const newHtmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -442,7 +359,6 @@ export default function App() {
     const updatedHtml = updateElementInHtml(activeFile.content, elementId, updates);
     handleContentChange(activeFilePath, updatedHtml, true);
 
-    // Keep inspector synced
     setSelectedElement(prev => prev ? {
       ...prev,
       textContent: updates.textContent !== undefined ? updates.textContent : prev.textContent,
@@ -463,7 +379,51 @@ export default function App() {
     const updatedHtml = insertImageIntoElementInHtml(activeFile.content, elementId, assetPath);
     const taggedHtml = tagRawHtml(updatedHtml);
     handleContentChange(activeFilePath, taggedHtml, true);
-    setSelectedElement(null); // Deselect element to force canvas reload
+    setSelectedElement(null);
+  };
+
+  // 9c. Update Image Source or Child Img Source directly
+  const handleUpdateImageSource = (elementId, newSrc, newAlt = null) => {
+    if (!activeFile || activeFile.type !== 'html') return;
+    saveToHistory(files);
+    const updatedHtml = updateImageSourceInHtml(activeFile.content, elementId, newSrc, newAlt);
+    const taggedHtml = tagRawHtml(updatedHtml);
+    handleContentChange(activeFilePath, taggedHtml, true);
+
+    setSelectedElement(prev => prev ? {
+      ...prev,
+      attributes: {
+        ...(prev.attributes || {}),
+        src: newSrc,
+        ...(newAlt !== null ? { alt: newAlt } : {})
+      }
+    } : null);
+  };
+
+  // 9d. Upload and set image directly from Property Inspector
+  const handleUploadAndSetImage = (elementId, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const assetPath = `assets/${cleanName}`;
+      
+      setFiles(prev => ({
+        ...prev,
+        [assetPath]: {
+          path: assetPath,
+          name: cleanName,
+          type: 'image',
+          blobUrl: dataUrl,
+          content: dataUrl.split(',')[1],
+          updatedAt: Date.now()
+        }
+      }));
+      
+      handleUpdateImageSource(elementId, dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   // 10. Delete Element
@@ -518,14 +478,12 @@ export default function App() {
     let updatedHtml;
     const targetId = relativeToId || selectedElement?.id;
     if ((position === 'before' || position === 'after') && targetId) {
-      updatedHtml = insertBlockRelativeInHtml(activeFile.content, blockHtml, targetId, position);
+      updatedHtml = insertElementRelativeInHtml(activeFile.content, blockHtml, targetId, position);
     } else {
       updatedHtml = insertBlockIntoHtml(activeFile.content, blockHtml);
     }
     
-    // Tag newly inserted layout blocks persistently
     updatedHtml = tagRawHtml(updatedHtml);
-    
     handleContentChange(activeFilePath, updatedHtml, true);
   };
 
@@ -543,6 +501,36 @@ export default function App() {
     saveToHistory(files);
     const updatedHtml = moveBlockDownInHtml(activeFile.content, elementId);
     handleContentChange(activeFilePath, updatedHtml, true);
+  };
+
+  // 11d. Select Parent Element
+  const handleSelectParentElement = () => {
+    if (!activeFile || !selectedElement?.id) return;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(activeFile.content, 'text/html');
+    const currentEl = doc.querySelector(`[data-sitecraft-id="${selectedElement.id}"]`);
+    
+    if (currentEl && currentEl.parentElement && currentEl.parentElement.tagName !== 'BODY') {
+      const parent = currentEl.parentElement;
+      const parentId = parent.getAttribute('data-sitecraft-id');
+      if (parentId) {
+        const attrs = {};
+        for (let i = 0; i < parent.attributes.length; i++) {
+          const attr = parent.attributes[i];
+          if (!attr.name.startsWith('data-sitecraft')) {
+            attrs[attr.name] = attr.value;
+          }
+        }
+        setSelectedElement({
+          id: parentId,
+          tagName: parent.tagName.toLowerCase(),
+          textContent: parent.children.length === 0 ? parent.textContent : '',
+          attributes: attrs,
+          styles: {}
+        });
+      }
+    }
   };
 
   // 12. Upload Image Asset
@@ -567,10 +555,51 @@ export default function App() {
     handleInsertBlock(imgHtml);
   };
 
-  const assetList = Object.values(files).filter(f => f.type === 'image');
+  const pageSections = useMemo(() => {
+    if (!activeFile || activeFile.type !== 'html') return [];
+    return getPageSections(activeFile.content);
+  }, [activeFile]);
+
+  const assetList = useMemo(() => {
+    return Object.values(files).filter(f => f.type === 'image');
+  }, [files]);
 
   return (
     <div className="studio-container">
+      {/* Uploading Progress Modal */}
+      {uploadProgress.isUploading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff'
+        }}>
+          <div style={{
+            background: '#1e293b',
+            border: '1px solid #334155',
+            borderRadius: '16px',
+            padding: '32px 40px',
+            width: '420px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            textAlign: 'center'
+          }}>
+            <Loader2 className="animate-spin" size={42} style={{ color: '#6366f1', margin: '0 auto 16px', display: 'block' }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 8px', color: '#f8fafc' }}>Extracting Template ZIP</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: '0 0 20px' }}>{uploadProgress.message || 'Processing archive files...'}</p>
+            
+            <div style={{ width: '100%', height: '8px', background: '#0f172a', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: `${uploadProgress.percent}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #a855f7)', transition: 'width 0.2s ease-out' }}></div>
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#64748b', textAlign: 'right' }}>{uploadProgress.percent}%</div>
+          </div>
+        </div>
+      )}
+
       <HeaderBar 
         onUploadZip={handleUploadZip}
         onLoadSample={handleLoadSample}
@@ -587,83 +616,89 @@ export default function App() {
         onRedo={handleRedo}
       />
 
-      <div className="studio-workspace">
-        {/* Unified Left Sidebar */}
-        <FileExplorer 
-          files={files}
-          activeFile={activeFilePath}
-          onSelectFile={(path) => {
-            setActiveFilePath(path);
-            setSelectedElement(null);
-          }}
-          onAddPage={handleAddPage}
-          onDuplicateFile={handleDuplicateFile}
-          onDeleteFile={handleDeleteFile}
-          onRenameFile={handleRenameFile}
-          pageSections={pageSections}
-          onMoveBlockUp={handleMoveBlockUp}
-          onMoveBlockDown={handleMoveBlockDown}
-          onDeleteElement={handleDeleteElement}
-          onInsertBlock={handleInsertBlock}
-          hasSelectedElement={!!selectedElement}
-          onUploadAsset={handleUploadAsset}
-          onInsertImageToHtml={handleInsertImageTag}
-          activeTab={sidebarTab}
-          setActiveTab={setSidebarTab}
-        />
+      {Object.keys(files).length === 0 ? (
+        <InitialUploadScreen onUploadZip={handleUploadZip} onLoadSample={handleLoadSample} />
+      ) : (
+        <div className="studio-workspace">
+          {/* Unified Left Sidebar */}
+          <FileExplorer 
+            files={files}
+            activeFile={activeFilePath}
+            onSelectFile={(path) => {
+              setActiveFilePath(path);
+              setSelectedElement(null);
+            }}
+            onAddPage={handleAddPage}
+            onDuplicateFile={handleDuplicateFile}
+            onDeleteFile={handleDeleteFile}
+            onRenameFile={handleRenameFile}
+            pageSections={pageSections}
+            onMoveBlockUp={handleMoveBlockUp}
+            onMoveBlockDown={handleMoveBlockDown}
+            onDeleteElement={handleDeleteElement}
+            onInsertBlock={handleInsertBlock}
+            hasSelectedElement={!!selectedElement}
+            onUploadAsset={handleUploadAsset}
+            onInsertImageToHtml={handleInsertImageTag}
+            activeTab={sidebarTab}
+            setActiveTab={setSidebarTab}
+          />
 
-        {/* Center Workspace (Visual Canvas or Code Editor) */}
-        {viewMode === 'visual' ? (
-          activeFile && activeFile.type === 'html' ? (
-            <VisualCanvas 
-              htmlContent={activeFile.content}
-              filesMap={files}
-              activeFilePath={activeFilePath}
-              viewportMode={viewportMode}
-              selectedElementId={selectedElement?.id}
-              onSelectElement={setSelectedElement}
-              onUpdateElementText={handleUpdateElementText}
-              onInsertBlock={handleInsertBlock}
-              onCopyElement={handleCopyElement}
-              onPasteElement={handlePasteElement}
-              onDuplicateElement={handleDuplicateElement}
-              onDeleteElement={handleDeleteElement}
-              copiedElementHtml={copiedElementHtml}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              onSelectParent={handleSelectParentElement}
-            />
+          {/* Center Workspace (Visual Canvas or Code Editor) */}
+          {viewMode === 'visual' ? (
+            activeFile && activeFile.type === 'html' ? (
+              <VisualCanvas 
+                htmlContent={activeFile.content}
+                filesMap={files}
+                activeFilePath={activeFilePath}
+                viewportMode={viewportMode}
+                selectedElementId={selectedElement?.id}
+                onSelectElement={setSelectedElement}
+                onUpdateElementText={handleUpdateElementText}
+                onInsertBlock={handleInsertBlock}
+                onCopyElement={handleCopyElement}
+                onPasteElement={handlePasteElement}
+                onDuplicateElement={handleDuplicateElement}
+                onDeleteElement={handleDeleteElement}
+                copiedElementHtml={copiedElementHtml}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onSelectParent={handleSelectParentElement}
+              />
+            ) : (
+              <CodeEditor 
+                fileObj={activeFile}
+                onContentChange={handleContentChange}
+              />
+            )
           ) : (
             <CodeEditor 
               fileObj={activeFile}
               onContentChange={handleContentChange}
             />
-          )
-        ) : (
-          <CodeEditor 
-            fileObj={activeFile}
-            onContentChange={handleContentChange}
-          />
-        )}
+          )}
 
-        {/* Right Property Inspector Panel */}
-        {viewMode === 'visual' && activeFile?.type === 'html' && (
-          <PropertyInspector 
-            selectedElement={selectedElement}
-            onUpdateElement={handleUpdateElement}
-            onDeleteElement={handleDeleteElement}
-            onMoveBlockUp={handleMoveBlockUp}
-            onMoveBlockDown={handleMoveBlockDown}
-            availableAssets={assetList}
-            onTransformToImage={handleTransformToImage}
-            onCopyElement={handleCopyElement}
-            onPasteElement={handlePasteElement}
-            onDuplicateElement={handleDuplicateElement}
-            copiedElementHtml={copiedElementHtml}
-            onSelectParent={handleSelectParentElement}
-          />
-        )}
-      </div>
+          {/* Right Property Inspector Panel */}
+          {viewMode === 'visual' && activeFile?.type === 'html' && (
+            <PropertyInspector 
+              selectedElement={selectedElement}
+              onUpdateElement={handleUpdateElement}
+              onDeleteElement={handleDeleteElement}
+              onMoveBlockUp={handleMoveBlockUp}
+              onMoveBlockDown={handleMoveBlockDown}
+              availableAssets={assetList}
+              onTransformToImage={handleTransformToImage}
+              onUpdateImageSource={handleUpdateImageSource}
+              onUploadAndSetImage={handleUploadAndSetImage}
+              onCopyElement={handleCopyElement}
+              onPasteElement={handlePasteElement}
+              onDuplicateElement={handleDuplicateElement}
+              copiedElementHtml={copiedElementHtml}
+              onSelectParent={handleSelectParentElement}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

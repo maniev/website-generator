@@ -14,7 +14,8 @@ import {
   ClipboardPaste,
   CopyPlus,
   Move,
-  Unlink
+  Unlink,
+  Upload
 } from 'lucide-react';
 
 export const PropertyInspector = ({ 
@@ -25,6 +26,8 @@ export const PropertyInspector = ({
   onMoveBlockDown,
   availableAssets = [],
   onTransformToImage,
+  onUpdateImageSource,
+  onUploadAndSetImage,
   onCopyElement,
   onPasteElement,
   onDuplicateElement,
@@ -32,12 +35,15 @@ export const PropertyInspector = ({
   onSelectParent
 }) => {
   const [typedUrl, setTypedUrl] = useState('');
+  const [imageUrlInput, setImageUrlInput] = useState('');
   const [linkPadding, setLinkPadding] = useState(true);
   const [linkMargin, setLinkMargin] = useState(true);
+  const fileInputRef = React.useRef(null);
 
   // Sync link states when selected element changes
-  useEffect(() => {
+      useEffect(() => {
     if (selectedElement) {
+      setImageUrlInput(selectedElement.attributes?.src || '');
       const { styles = {} } = selectedElement;
       const pt = styles.paddingTop || '';
       const pr = styles.paddingRight || '';
@@ -216,6 +222,133 @@ export const PropertyInspector = ({
           </button>
         </div>
       </div>
+
+      {/* Quick Action Bar for Remove / Delete */}
+      <div style={{ padding: '10px 16px', background: 'rgba(239, 68, 68, 0.06)', borderBottom: '1px solid rgba(239, 68, 68, 0.15)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <button 
+          style={{ flex: 1, background: '#ef4444', color: '#ffffff', border: 'none', padding: '7px 12px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(239, 68, 68, 0.25)' }}
+          onClick={() => onDeleteElement(id)}
+        >
+          <Trash2 size={14} /> Delete / Remove Selected Item
+        </button>
+      </div>
+
+      {/* Image & Photo Settings Control Panel */}
+      {(tagName === 'img' || !!attributes.src || (attributes.class && (attributes.class.includes('item') || attributes.class.includes('gallery') || attributes.class.includes('mosaic') || attributes.class.includes('editorial')))) && (
+        <div className="inspector-group" style={{ background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '14px', margin: '14px 16px' }}>
+          <div className="inspector-group-title" style={{ color: '#6366f1', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 800 }}>
+            <ImageIcon size={16} /> Image & Photo Settings
+          </div>
+
+          {/* Live Image Preview Thumbnail */}
+          {attributes.src && (
+            <div style={{ margin: '10px 0', textAlign: 'center', background: '#0f172a', borderRadius: '8px', padding: '8px', overflow: 'hidden' }}>
+              <img 
+                src={attributes.src} 
+                alt="Current" 
+                style={{ maxHeight: '110px', maxWidth: '100%', objectFit: 'contain', borderRadius: '6px', display: 'block', margin: '0 auto' }} 
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            </div>
+          )}
+
+          {/* 1. Direct File Upload Button */}
+          <div style={{ marginBottom: '12px' }}>
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && onUploadAndSetImage) {
+                  onUploadAndSetImage(id, file);
+                }
+                e.target.value = '';
+              }}
+              hidden
+            />
+            <button 
+              className="btn-studio btn-studio-primary"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '9px 14px', fontSize: '0.82rem', fontWeight: 700 }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={15} /> Upload & Replace Image File
+            </button>
+          </div>
+
+          {/* 2. Choose from Project Assets */}
+          {availableAssets.length > 0 && (
+            <div className="form-group" style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Select from Project Assets</label>
+              <select 
+                className="form-control"
+                value={attributes.src || ''}
+                onChange={(e) => {
+                  if (e.target.value && onUpdateImageSource) {
+                    onUpdateImageSource(id, e.target.value);
+                  }
+                }}
+              >
+                <option value="">-- Choose Asset --</option>
+                {availableAssets.map((asset) => (
+                  <option key={asset.path} value={asset.blobUrl || asset.path}>
+                    {asset.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 3. Paste Image URL Input */}
+          <div className="form-group" style={{ marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Image Web URL (src)</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="https://images.unsplash.com/..." 
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (imageUrlInput.trim() && onUpdateImageSource) {
+                      onUpdateImageSource(id, imageUrlInput.trim());
+                    }
+                  }
+                }}
+              />
+              <button 
+                className="btn-studio btn-studio-primary" 
+                style={{ padding: '6px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                onClick={() => {
+                  if (imageUrlInput.trim() && onUpdateImageSource) {
+                    onUpdateImageSource(id, imageUrlInput.trim());
+                  }
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Alt Description Input */}
+          <div className="form-group" style={{ marginTop: '8px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Alt Description</label>
+            <input 
+              type="text"
+              className="form-control"
+              value={attributes.alt || ''}
+              onChange={(e) => {
+                if (onUpdateImageSource) {
+                  onUpdateImageSource(id, attributes.src || imageUrlInput, e.target.value);
+                }
+              }}
+              placeholder="Photo description"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Text Content Editor */}
       {!['img', 'input', 'br', 'hr'].includes(tagName) && (

@@ -181,6 +181,114 @@ body, html {
   position: relative;
 }
 
+/* Initial project import */
+.initial-upload-screen {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15), transparent 42%),
+    var(--bg-dark);
+}
+
+.initial-upload-card {
+  width: min(100%, 540px);
+  padding: 42px;
+  text-align: center;
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.initial-upload-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), #4338ca);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px var(--primary-glow);
+}
+
+.initial-upload-eyebrow {
+  margin-bottom: 8px;
+  color: var(--accent-cyan);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.initial-upload-card h1 {
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: clamp(1.65rem, 4vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.initial-upload-copy {
+  max-width: 390px;
+  margin: 0 auto 26px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.initial-upload-action {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+}
+
+.initial-upload-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 13px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.initial-upload-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 16px;
+  color: var(--text-dim);
+  font-size: 0.76rem;
+}
+
+.initial-upload-divider::before,
+.initial-upload-divider::after {
+  flex: 1;
+  height: 1px;
+  content: '';
+  background: var(--border-color);
+}
+
+.initial-sample-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px;
+  border: 0;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.initial-sample-action:hover {
+  color: #fff;
+}
+
 /* Left Sidebar */
 .studio-sidebar {
   width: var(--sidebar-width);

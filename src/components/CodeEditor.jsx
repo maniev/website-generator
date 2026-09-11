@@ -76,6 +76,11 @@ export const CodeEditor = ({ fileObj, onContentChange }) => {
         defaultValue={fileObj.content || ''}
         onMount={handleEditorDidMount}
         onChange={handleEditorChange}
+        loading={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--accent-cyan)', background: '#090d16', fontSize: '0.9rem', fontWeight: 600, gap: '8px' }}>
+            <span>Initializing Editor...</span>
+          </div>
+        }
         theme="vs-dark"
         options={{
           fontSize: 14,

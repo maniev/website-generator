@@ -13,9 +13,15 @@ export const getFileType = (path) => {
 };
 
 // Extract ZIP file into virtual filesystem with path normalization
-export const extractZipFile = async (zipBlobOrFile) => {
+export const extractZipFile = async (zipBlobOrFile, onProgress) => {
+  if (onProgress) onProgress(10, 'Reading ZIP archive file...');
   const zip = new JSZip();
-  const loadedZip = await zip.loadAsync(zipBlobOrFile);
+  const loadedZip = await zip.loadAsync(zipBlobOrFile, (metadata) => {
+    if (onProgress && metadata.percent) {
+      const calcPct = Math.min(30, Math.round(10 + (metadata.percent * 0.2)));
+      onProgress(calcPct, `Decompressing archive... ${Math.round(metadata.percent)}%`);
+    }
+  });
   
   const files = {};
   const entries = Object.entries(loadedZip.files);
@@ -43,7 +49,16 @@ export const extractZipFile = async (zipBlobOrFile) => {
     }
   }
   
+  const total = validEntries.length;
+  let count = 0;
+
   for (const [relativePath, zipEntry] of validEntries) {
+    count++;
+    if (onProgress && total > 0) {
+      const pct = Math.min(85, Math.round(30 + ((count / total) * 55)));
+      onProgress(pct, `Extracting file ${count} of ${total}: ${zipEntry.name.split('/').pop()}`);
+    }
+
     // Normalize separating slashes
     let cleanPath = relativePath.replace(/\\/g, '/');
     if (commonPrefix && cleanPath.startsWith(commonPrefix)) {
@@ -72,6 +87,7 @@ export const extractZipFile = async (zipBlobOrFile) => {
     };
   }
   
+  if (onProgress) onProgress(90, 'Processing HTML tags & visual workspace...');
   return files;
 };
 
@@ -119,6 +135,10 @@ export const cleanHtmlForExport = (htmlString) => {
     el.removeAttribute('contenteditable');
   });
   
+  // Remove editor-only helper elements (e.g. "+ Add Image Card" placeholders)
+  const editorOnlyElems = doc.querySelectorAll('[data-sitecraft-editor-only="true"], .sitecraft-add-card');
+  editorOnlyElems.forEach((el) => el.remove());
+
   // Remove injected helper styles/scripts if any
   const helperStyles = doc.querySelectorAll('#sitecraft-editor-styles');
   helperStyles.forEach((s) => s.remove());
